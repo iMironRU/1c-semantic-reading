@@ -35,13 +35,14 @@ jobs:
           cover = data.get('cover-image', '')
           toc_depth = data.get('toc-depth', 2)
           papersize = data.get('pdf-papersize', 'a5')
-          print(f'::set-output name=title::{title}')
-          print(f'::set-output name=author::{author}')
-          print(f'::set-output name=lang::{lang}')
-          print(f'::set-output name=cover::{cover}')
-          print(f'::set-output name=toc_depth::{toc_depth}')
-          print(f'::set-output name=papersize::{papersize}')
-          " >> $GITHUB_OUTPUT
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'title={title}\n')
+              f.write(f'author={author}\n')
+              f.write(f'lang={lang}\n')
+              f.write(f'cover={cover}\n')
+              f.write(f'toc_depth={toc_depth}\n')
+              f.write(f'papersize={papersize}\n')
+          "
         shell: bash
 
       - name: Install tools
