@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5  # <-- ОБНОВЛЕНО
 
       - name: Setup Pandoc
         run: sudo apt-get update && sudo apt-get install -y pandoc
@@ -22,8 +22,6 @@ jobs:
       - name: Assemble book MD (only module_* folders)
         run: |
           echo "" > book.md
-
-          # Проходим по всем module_*, сортировка по версии
           for module_dir in $(ls -d module_*/ | sort -V); do
             echo "Processing module directory: $module_dir"
             find "$module_dir" -name "*.md" -type f | sort -V | while read f; do
@@ -55,7 +53,7 @@ jobs:
             -o "1C_kak_inostranniy_yazyk.fb2"
 
       - name: Upload artifacts (for inspection)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6  # <-- ОБНОВЛЕНО
         with:
           name: books
           path: |
