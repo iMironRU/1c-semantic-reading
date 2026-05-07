@@ -48,7 +48,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra fonts-dejavu
 
       - name: Assemble book from chapters/*/
         run: |
@@ -113,6 +113,9 @@ jobs:
             --metadata lang="${{ steps.meta.outputs.lang }}" \
             --pdf-engine=xelatex \
             -V papersize=${{ steps.meta.outputs.papersize }} \
+            -V mainfont="DejaVu Serif" \
+            -V sansfont="DejaVu Sans" \
+            -V monofont="DejaVu Sans Mono" \
             -o output/book.pdf
 
       # HTML
