@@ -1,0 +1,4 @@
+output/
+book.md
+*.log
+.DS_Store

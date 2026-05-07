@@ -1,0 +1,144 @@
+name: Build Books (Universal v3)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'chapters/**.md'
+      - 'metadata.yaml'
+      - 'cover.*'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Чтение метаданных (pdf-papersize по умолчанию a5)
+      - name: Read metadata
+        id: meta
+        run: |
+          python3 -c "
+          import yaml, os
+          with open('metadata.yaml', 'r') as f:
+              data = yaml.safe_load(f)
+          title = data.get('title', 'Untitled')
+          author = data.get('author', 'Unknown')
+          lang = data.get('lang', 'en')
+          cover = data.get('cover-image', '')
+          toc_depth = data.get('toc-depth', 2)
+          papersize = data.get('pdf-papersize', 'a5')
+          print(f'::set-output name=title::{title}')
+          print(f'::set-output name=author::{author}')
+          print(f'::set-output name=lang::{lang}')
+          print(f'::set-output name=cover::{cover}')
+          print(f'::set-output name=toc_depth::{toc_depth}')
+          print(f'::set-output name=papersize::{papersize}')
+          " >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-extra
+
+      - name: Assemble book from chapters/*/
+        run: |
+          mkdir -p output
+          > book.md
+          if [ ! -d "chapters" ]; then
+            echo "ERROR: 'chapters/' directory not found!"
+            exit 1
+          fi
+
+          for chapter_dir in $(ls -d chapters/*/ | sort); do
+            echo "Processing: $chapter_dir"
+
+            # Извлекаем имя главы без префикса "01_"
+            chapter_name=$(basename "$chapter_dir" | sed 's/^[0-9]*_//; s/_/ /g')
+            echo "# $chapter_name" >> book.md
+            echo "" >> book.md
+
+            # Собираем все .md внутри папки, сортируем по имени
+            find "$chapter_dir" -maxdepth 1 -name "*.md" -type f | sort | while read f; do
+              echo "  Adding $f"
+              cat "$f" >> book.md
+              echo -e "\n\n" >> book.md
+            done
+          done
+
+      # EPUB
+      - name: Build EPUB
+        run: |
+          COVER_OPTION=""
+          if [ -n "${{ steps.meta.outputs.cover }}" ] && [ -f "${{ steps.meta.outputs.cover }}" ]; then
+            COVER_OPTION="--epub-cover-image=${{ steps.meta.outputs.cover }}"
+          fi
+          pandoc book.md \
+            --from markdown \
+            --to epub3 \
+            --metadata title="${{ steps.meta.outputs.title }}" \
+            --metadata author="${{ steps.meta.outputs.author }}" \
+            --metadata lang="${{ steps.meta.outputs.lang }}" \
+            $COVER_OPTION \
+            --toc --toc-depth=${{ steps.meta.outputs.toc_depth }} \
+            -o output/book.epub
+
+      # FB2
+      - name: Build FB2
+        run: |
+          pandoc book.md \
+            --to fb2 \
+            --metadata title="${{ steps.meta.outputs.title }}" \
+            --metadata author="${{ steps.meta.outputs.author }}" \
+            --metadata lang="${{ steps.meta.outputs.lang }}" \
+            --metadata cover-image="${{ steps.meta.outputs.cover }}" \
+            --toc --toc-depth=${{ steps.meta.outputs.toc_depth }} \
+            -o output/book.fb2
+
+      # PDF (A5 по умолчанию)
+      - name: Build PDF
+        run: |
+          pandoc book.md \
+            --metadata title="${{ steps.meta.outputs.title }}" \
+            --metadata author="${{ steps.meta.outputs.author }}" \
+            --metadata lang="${{ steps.meta.outputs.lang }}" \
+            --pdf-engine=xelatex \
+            -V papersize=${{ steps.meta.outputs.papersize }} \
+            -o output/book.pdf
+
+      # HTML
+      - name: Build HTML
+        run: |
+          pandoc book.md \
+            --metadata title="${{ steps.meta.outputs.title }}" \
+            --metadata author="${{ steps.meta.outputs.author }}" \
+            --metadata lang="${{ steps.meta.outputs.lang }}" \
+            --self-contained \
+            -o output/book.html
+
+      # DOCX
+      - name: Build DOCX
+        run: |
+          pandoc book.md \
+            --metadata title="${{ steps.meta.outputs.title }}" \
+            --metadata author="${{ steps.meta.outputs.author }}" \
+            --metadata lang="${{ steps.meta.outputs.lang }}" \
+            -o output/book.docx
+
+      - name: Create Draft Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: "Черновик: ${{ steps.meta.outputs.title }}"
+          tag_name: draft-${{ github.run_id }}
+          draft: true
+          files: output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
