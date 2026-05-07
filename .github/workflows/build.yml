@@ -1,0 +1,75 @@
+name: Build Books (Draft)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
+      - name: Assemble book MD (only module_* folders)
+        run: |
+          echo "" > book.md
+
+          # Проходим по всем module_*, сортировка по версии
+          for module_dir in $(ls -d module_*/ | sort -V); do
+            echo "Processing module directory: $module_dir"
+            find "$module_dir" -name "*.md" -type f | sort -V | while read f; do
+              echo "Adding $f"
+              cat "$f" >> book.md
+              echo -e "\n\n" >> book.md
+            done
+          done
+
+      - name: Build EPUB
+        run: |
+          pandoc book.md \
+            --from markdown \
+            --to epub3 \
+            --metadata title="1С как иностранный язык" \
+            --metadata author="Мирошниченко Александр (aka iMiron)" \
+            --metadata lang="ru" \
+            --epub-cover-image=cover.png \
+            -o "1C_kak_inostranniy_yazyk.epub"
+
+      - name: Build FB2 (without embedded cover image)
+        run: |
+          pandoc book.md \
+            --from markdown \
+            --to fb2 \
+            --metadata title="1С как иностранный язык" \
+            --metadata author="Мирошниченко Александр (aka iMiron)" \
+            --metadata lang="ru" \
+            -o "1C_kak_inostranniy_yazyk.fb2"
+
+      - name: Upload artifacts (for inspection)
+        uses: actions/upload-artifact@v4
+        with:
+          name: books
+          path: |
+            *.epub
+            *.fb2
+
+      - name: Create/update draft release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete draft --yes --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh release create draft \
+            --draft \
+            --title "Черновая сборка ($(date +'%Y-%m-%d %H:%M'))" \
+            --notes "Автоматический черновик при пуше в main. Содержит EPUB и FB2." \
+            *.epub *.fb2
