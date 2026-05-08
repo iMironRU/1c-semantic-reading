@@ -1,15 +1,9 @@
 name: Build Books (Universal v3)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'chapters/**.md'
-      - 'metadata.yaml'
-      - 'cover.*'
-      - '.github/workflows/build.yml'
-  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'   # каждый день в 02:00 UTC (05:00 мск)
+  workflow_dispatch:        # ручной запуск из GitHub → Actions
 
 jobs:
   build:
