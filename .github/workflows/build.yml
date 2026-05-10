@@ -15,6 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Generate build info
+        id: build_info
+        run: |
+          echo "build_date=$(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+          echo "build_num=${{ github.run_number }}"           >> $GITHUB_OUTPUT
+          echo "build_sha=${GITHUB_SHA::7}"                   >> $GITHUB_OUTPUT
+
       # Чтение метаданных (pdf-papersize по умолчанию a5)
       - name: Read metadata
         id: meta
@@ -82,6 +89,7 @@ jobs:
             --metadata title="${{ steps.meta.outputs.title }}" \
             --metadata author="${{ steps.meta.outputs.author }}" \
             --metadata lang="${{ steps.meta.outputs.lang }}" \
+            --metadata date="Сборка №${{ steps.build_info.outputs.build_num }} · ${{ steps.build_info.outputs.build_date }} · ${{ steps.build_info.outputs.build_sha }}" \
             $COVER_OPTION \
             --toc --toc-depth=${{ steps.meta.outputs.toc_depth }} \
             -o output/book.epub
@@ -95,6 +103,7 @@ jobs:
             --metadata author="${{ steps.meta.outputs.author }}" \
             --metadata lang="${{ steps.meta.outputs.lang }}" \
             --metadata cover-image="${{ steps.meta.outputs.cover }}" \
+            --metadata date="Сборка №${{ steps.build_info.outputs.build_num }} · ${{ steps.build_info.outputs.build_date }} · ${{ steps.build_info.outputs.build_sha }}" \
             --toc --toc-depth=${{ steps.meta.outputs.toc_depth }} \
             -o output/book.fb2
 
@@ -105,6 +114,7 @@ jobs:
             --metadata title="${{ steps.meta.outputs.title }}" \
             --metadata author="${{ steps.meta.outputs.author }}" \
             --metadata lang="${{ steps.meta.outputs.lang }}" \
+            --metadata date="Сборка №${{ steps.build_info.outputs.build_num }} · ${{ steps.build_info.outputs.build_date }} · ${{ steps.build_info.outputs.build_sha }}" \
             --pdf-engine=xelatex \
             -V papersize=${{ steps.meta.outputs.papersize }} \
             -V mainfont="DejaVu Serif" \
@@ -119,6 +129,7 @@ jobs:
             --metadata title="${{ steps.meta.outputs.title }}" \
             --metadata author="${{ steps.meta.outputs.author }}" \
             --metadata lang="${{ steps.meta.outputs.lang }}" \
+            --metadata date="Сборка №${{ steps.build_info.outputs.build_num }} · ${{ steps.build_info.outputs.build_date }} · ${{ steps.build_info.outputs.build_sha }}" \
             --self-contained \
             -o output/book.html
 
@@ -129,12 +140,13 @@ jobs:
             --metadata title="${{ steps.meta.outputs.title }}" \
             --metadata author="${{ steps.meta.outputs.author }}" \
             --metadata lang="${{ steps.meta.outputs.lang }}" \
+            --metadata date="Сборка №${{ steps.build_info.outputs.build_num }} · ${{ steps.build_info.outputs.build_date }} · ${{ steps.build_info.outputs.build_sha }}" \
             -o output/book.docx
 
       - name: Create Draft Release
         uses: softprops/action-gh-release@v3
         with:
-          name: "Черновик: ${{ steps.meta.outputs.title }}"
+          name: "Черновик №${{ steps.build_info.outputs.build_num }}: ${{ steps.meta.outputs.title }}"
           tag_name: draft-${{ github.run_id }}
           draft: true
           files: output/*
