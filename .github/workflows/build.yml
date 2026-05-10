@@ -149,6 +149,8 @@ jobs:
           name: "Черновик №${{ steps.build_info.outputs.build_num }}: ${{ steps.meta.outputs.title }}"
           tag_name: draft-${{ github.run_id }}
           draft: true
+          body: |
+            rev. ${{ steps.build_info.outputs.build_sha }}, сборка ${{ steps.build_info.outputs.build_date }}
           files: output/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
