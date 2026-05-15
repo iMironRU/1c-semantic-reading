@@ -3,3 +3,8 @@ book.md
 *.log
 .DS_Store
 .claude/
+
+# Review workflow
+reviews/
+docs/review-status.json
+.env
