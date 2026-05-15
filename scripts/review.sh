@@ -61,7 +61,7 @@ chapter_text  = chapter_file.read_text(encoding="utf-8")
 
 # --- Запрос к DeepSeek ---
 payload = {
-    "model": "deepseek-chat",
+    "model": "deepseek-v4-pro",
     "messages": [
         {"role": "system", "content": system_prompt},
         {"role": "user",   "content": f"Вот параграф для рецензии:\n\n{chapter_text}"}
